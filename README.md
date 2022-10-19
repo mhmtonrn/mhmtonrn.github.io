@@ -1,2 +1,1 @@
-# mhmtonrn.github.io
-bbkbkj
+theme: minima
