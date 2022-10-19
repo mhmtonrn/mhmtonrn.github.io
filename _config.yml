@@ -1,2 +1,16 @@
+title: Mehmet ONAR
+author:
+  name: mhmtonrn
+  email: mhmronar1@gmail.com
+description: > description
+
+minima:
+  date_format: "%b %-d, %Y"
+
+  # generate social links in footer
+  social_links:
+    twitter: jekyllrb
+    github:  jekyll
+
 markdown: kramdown
 theme: modernist
