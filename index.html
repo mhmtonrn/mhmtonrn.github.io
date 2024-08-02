@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242" crossorigin="anonymous"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <title>Mehmet ONAR</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMXZsbT1Z7l+2xq6DkC1aA8VZwE8N8IzAuZkMv0" crossorigin="anonymous">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,8 +16,23 @@
         header {
             background-color: #333;
             color: #fff;
-            padding: 10px 0;
-            text-align: center;
+            padding: 10px 20px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            margin-left: 15px;
+        }
+        .logo {
+            font-size: 24px;
+            color: #fff;
+            display: inline-block;
+            padding: 5px;
+            border-radius: 50%;
+            background-color: #444;
         }
         nav {
             display: flex;
@@ -56,19 +71,19 @@
         }
         .post h2 {
             margin: 0;
-            color: #444; /* Canlı başlık rengi */
+            color: #444;
         }
         .post a {
             color: inherit;
             text-decoration: none;
         }
         .post a:hover {
-            text-decoration: none; /* Alt çizgi görünmemesi için */
-            color: inherit; /* Başlık rengi değişmemesi için */
+            text-decoration: none;
+            color: inherit;
         }
         #contact {
             background: white;
-            margin-bottom: 20px;
+            margin-bottom: 5px;
             padding: 20px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
@@ -101,7 +116,7 @@
             background-color: #333;
             color: white;
             text-align: center;
-            padding: 10px 0;
+            padding: 0 0;
             position: fixed;
             bottom: 0;
             width: 100%;
@@ -110,6 +125,7 @@
 </head>
 <body>
     <header>
+        <div class="logo"><i class="fas fa-code"></i></div>
         <h1>Mehmet ONAR</h1>
     </header>
     <nav>
