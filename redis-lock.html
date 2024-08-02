@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Authentication ve Authorization</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMXZsbT1Z7l+2xq6DkC1aA8VZwE8N8IzAuZkMv0" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #444;
+        }
+        nav a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+        nav a:hover {
+            background-color: #555;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        .content {
+            margin-top: 20px;
+        }
+        .post {
+            background: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .post h1, .post h2, .post h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .post h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .post h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .post h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .post p {
+            margin: 0 0 10px 0;
+        }
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Dağıtık Mimaride Redis İle Metotların Senkronize Edilmesi</h1>
+    </header>
+    <nav>
+        <a href="/#home">Ana Sayfa</a>
+        <a href="/#contact">İletişim</a>
+    </nav>
+    <div class="container">
+        <div class="content">
+
+        
+        <div class="post">
+            <h2>Giriş</h2>
+            <p>Bu yazımızda, farklı sunucular/düğümler üstünde çalışan uygulamalarda bir metotun Redis cache ile nasıl senkronize edilebileceğine değineceğiz. Mikroservis mimarilerinin yaygınlaşması ile birlikte uygulamalarımızı yatay olarak genişletebiliyoruz. Bu durumda, aynı metot birden fazla sunucudan çağrılabilir ve bu işlemlerin senkronize edilmesi gerekebilir.</p>
+        </div>
+        
+        <div class="post">
+            <h2>Spring Integration Bağımlılığı</h2>
+            <p>Öncelikle Spring Integration bağımlılığını projemize eklememiz gerekiyor:</p>
+            <pre><code>&lt;dependency&gt;
+  &lt;groupId&gt;org.springframework.integration&lt;/groupId&gt;
+  &lt;artifactId&gt;spring-integration-redis&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre>
+        </div>
+        
+        <div class="post">
+            <h2>LockRegistry Bean Oluşturma</h2>
+            <p>Configurasyon sınıflarında <code>lockRegistry</code> bean'ını oluşturuyoruz:</p>
+            <pre><code>private static final String LOCK_REGISTRY_REDIS_KEY = "REDIS_METHOD_SYNC";
+private static final Duration RELEASE_TIME_DURATION = Duration.ofSeconds(120);
+
+@Bean
+public ExpirableLockRegistry lockRegistry(RedisConnectionFactory redisConnectionFactory) {
+    RedisLockRegistry redisLockRegistry =
+        new RedisLockRegistry(redisConnectionFactory, LOCK_REGISTRY_REDIS_KEY,
+            RELEASE_TIME_DURATION.toMillis());
+    return redisLockRegistry;
+}</code></pre>
+        </div>
+        
+        <div class="post">
+            <h2>AOP Yapısı ile Senkronizasyon</h2>
+            <p>AOP yapısından destek alarak, Controller methodumuza istek geldiğinde anahtar üzerinden kilitleme ve kilit çözme işlemi yapacağız. Bu sayede aynı parametre ile istek atan kullanıcı, önceki işlemini tamamlamadan diğerini çalıştıramayacaktır:</p>
+            <pre><code>import lombok.RequiredArgsConstructor;
+import java.lang.reflect.Field;
+import java.util.Objects;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+
+@Aspect
+@Component
+@RequiredArgsConstructor
+public class RedisSyncAspect {
+
+  private final RedisSyncCacheService redisSyncCacheService;
+
+  @Before("@annotation(redisSync)")
+  public void before(JoinPoint joinPoint, RedisSync redisSync) {
+    Object[] args = joinPoint.getArgs();
+    String keySync = getKeySync(redisSync, args);
+
+    if (Objects.isNull(keySync)) {
+      throw new RuntimeException();
+    }
+
+    Lock lock = lockRegistry.obtain(keySync);
+    boolean success = lock.tryLock();
+
+    if (!success) {
+      throw new RuntimeException();
+    }
+  }
+
+  @AfterReturning(pointcut = "@annotation(redisSync)", returning = "result")
+  public <T> ResponseEntity after(JoinPoint joinPoint, RedisSync redisSync, ResponseEntity<T> result) {
+    Object[] args = joinPoint.getArgs();
+    String keySync = getKeySync(redisSync, args);
+    Lock lock = lockRegistry.obtain(keySync);
+    lock.unlock();
+    return result;
+  }
+
+  private static String getKeySync(RedisSync redisSync, Object[] args) {
+    String keySync = null;
+    for (Object arg : args) {
+      try {
+        Field field = arg.getClass().getDeclaredField(redisSync.syncField());
+        field.setAccessible(true);
+        String val = String.valueOf(field.get(arg));
+        if (val != null) {
+          keySync = val;
+          break;
+        }
+      } catch (IllegalAccessException | NoSuchFieldException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return keySync;
+  }
+}</code></pre>
+        </div>
+        
+        <div class="post">
+            <h2>RedisSync Anotasyonu</h2>
+            <p>Metodun üzerine anotasyon olarak eklenir ve metot parametrelerinden hangi alanı kullanarak senkronizasyon yapılacağını belirtir:</p>
+            <pre><code>import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface RedisSync {
+  String syncField();
+}</code></pre>
+        </div>
+        
+        <div class="post">
+            <h2>Kullanım Örneği</h2>
+            <p>Bir metodun üzerine anotasyon eklenerek senkronizasyon yapılabilir. <code>syncField</code> kısmına senkronize edilecek alanın adı girilmelidir:</p>
+            <pre><code>@RedisSync(syncField = "barId")
+@PostMapping
+public ResponseEntity<Foo> ekle(@RequestBody Bar bar) {
+    return new Foo();
+}</code></pre>
+        </div>
+    </div>
+    </div>
+</body>
+</html>

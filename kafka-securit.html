@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Authentication ve Authorization</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMXZsbT1Z7l+2xq6DkC1aA8VZwE8N8IzAuZkMv0" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #444;
+        }
+        nav a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+        nav a:hover {
+            background-color: #555;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        .content {
+            margin-top: 20px;
+        }
+        .post {
+            background: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .post h1, .post h2, .post h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .post h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .post h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .post h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .post p {
+            margin: 0 0 10px 0;
+        }
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Kafka Authentication ve Authorization</h1>
+    </header>
+    <nav>
+        <a href="/#home">Ana Sayfa</a>
+        <a href="/#contact">İletişim</a>
+    </nav>
+    <div class="container">
+        <div class="content">
+            <div class="post">
+                <h1>1. Kafka</h1>
+                <p>Apache Kafka, gerçek zamanlı veri işleme hatları ve stream uygulamaları oluşturmak için güçlü bir platformdur. Bir Kafka clusterını production ortamında çalıştırırken, Apache Kafka’daki güvenlik özelliklerini uygulayarak kümenin güvenliğini sağlamalıyız. Kimlik doğrulama gerektiren bir Kafka sunucusuna erişmek için, istemcileri ilgili kimlik bilgilerini iletecek şekilde yapılandırmamız gerekmektedir.</p>
+                <p>Bu yazıda, Kafka kimlik doğrulama şemalarını inceleyeceğiz ve kafka-topics.sh betiğini Kafka sunucusuyla kimlik doğrulaması yapacak şekilde yapılandırmayı göstereceğiz.</p>
+            </div>
+            <div class="post">
+                <h1>2. Kafka Security</h1>
+                <p>Apache Kafka, bir Kafka kümesinin güvenliğini artıran çeşitli özellikler sunar. Sunucu bağlantı noktalarını güvence altına almak için kafkanın sunduğu protokollerden birini yapılandırabilir. Bu protokoller ile istemci-sunucu arasındaki iletişimin nasıl yapılacağına karar verir.</p>
+            </div>
+            <div class="post">
+                <h1>3. Güvenlik Protokolleri</h1>
+                <p>Apache Kafka sunucusu dört güvenlik protokolünü destekler: PLAINTEXT, SSL, SASL_PLAINTEXT ve SASL_SSL. Bu protokoller, esas olarak kimlik doğrulama mekanizması ve ağ üzerinde güvenli bir iletişim kanalının varlığı açısından farklılık gösterir.</p>
+                <h2>a. PLAINTEXT</h2>
+                <p>PLAINTEXT protokolü, iletimdeki veri için kimlik doğrulama ve şifreleme sağlamaz. Başka bir deyişle, PLAINTEXT protokolü, Kafka broker’ındaki tüm güvenlik önlemlerini devre dışı bırakan seçenektir. Kafka kurulum konfigürasyonunda bu protokol varsayılan olarak gelmektedir.</p>
+                <h2>b. SSL</h2>
+                <p>SSL güvenlik protokolü, Secure Socket Channel (SSL) protokolünü kullanarak istemci ve sunucu arasında güvenli bir iletişim kanalı kurulmasını zorunlu kılarak iletimdeki veri için şifreleme sağlar. Authentication ve Authorization aşamaları sertifikalar üzerinden gerçekleşmektedir.</p>
+                <h2>c. SASL_PLAINTEXT</h2>
+                <p>SASL_PLAINTEXT protokolü, Basit Kimlik Doğrulama ve Güvenlik Katmanı (SASL) çerçevesini kullanarak istemci kimlik doğrulamasını zorunlu kılar. Ancak, SASL_PLAINTEXT protokolü SSL kullanarak iletimdeki veriyi şifrelemez. Bu protokol en yaygın kullanılan protokol olup bu makalenin devamında örneğini yapacağımız protokol olacaktır.</p>
+                <h2>d. SASL_SSL</h2>
+                <p>SASL_SSL protokolü, SASL mekanizmasını kullanarak istemci kimlik doğrulamasını sağlar ve SSL protokolünü kullanarak güvenli bir kanal üzerinden iletişim kurar. Bu şekilde, SASL_SSL hem SASL_PLAINTEXT hem de SSL protokollerini birleştirir.</p>
+                <p>Kısaca, her güvenlik protokolünün kimlik doğrulama ve veri şifreleme açısından nasıl farklılık gösterdiğini şöyle özetleyebilirim:</p>
+                <p><strong>PLAINTEXT:</strong><br>
+                Kimlik Doğrulama: Yok<br>
+                Veri Şifreleme: Yok<br>
+                Veri iletiminde hiçbir kimlik doğrulama veya şifreleme sağlamaz. Güvenlik önlemleri devre dışı bırakılmıştır.</p>
+                <p><strong>SSL:</strong><br>
+                Kimlik Doğrulama: Sunucu ve istemci kimlik doğrulaması yapabilir.<br>
+                Veri Şifreleme: Var (SSL kullanılarak)<br>
+                SSL protokolü kullanılarak güvenli bir iletişim kanalı kurulur ve veri şifrelenir.</p>
+                <p><strong>SASL_PLAINTEXT:</strong><br>
+                Kimlik Doğrulama: SASL mekanizması kullanılarak istemci kimlik doğrulaması yapılır.<br>
+                Veri Şifreleme: Yok (SSL kullanılmaz)<br>
+                Kimlik doğrulaması sağlanır ancak veri şifrelenmez, dolayısıyla iletimdeki veri açıkta kalır.</p>
+                <p><strong>SASL_SSL:</strong><br>
+                Kimlik Doğrulama: SASL mekanizması kullanılarak istemci kimlik doğrulaması yapılır.<br>
+                Veri Şifreleme: Var (SSL kullanılarak)<br>
+                SSL protokolü kullanılarak güvenli bir iletişim kanalı kurulur ve veri şifrelenir.</p>
+            </div>
+            <div class="post">
+                <h1>4. SASL İşleyişi</h1>
+                <p>SASL frameworkunu kimlik doğrulaması için seçtiğimizde, örneğin SASL_PLAINTEXT ve SASL_SSL durumlarında, aşağıdaki kimlik doğrulama mekanizmalarından birini seçmek zorundayız. Apache Kafka, istemci kimlik doğrulaması için PLAIN, GSSAPI, SCRAM-SHA512 ve OAUTHBEARER gibi birkaç SASL mekanizmasını destekler. Bu mekanizmalar, istemcilerin iddia ettikleri gibi kim olduklarını doğrulamak için farklı yöntemler kullanır.</p>
+                <p>Örneğin, PLAIN mekanizması, istemcinin kimliğini doğrulamak için basit bir kullanıcı adı ve parola kimlik doğrulama mekanizmasıdır. Sunucu, kullanıcıların bir listesini ve bu kullanıcıların parolalarını kendi üzerinde liste olarak kaydeder ve kimlik bilgilerini bu listeyle eşleştirir.</p>
+                <p>Genellikle, kimlik doğrulama mekanizması SASL/&lt;MEKANİZMA&gt; (SASL/ SCRAM-SHA512 örnek) olarak belirtilir, MEKANİZMA desteklenen herhangi bir mekanizma olabilir. Örneğin, SASL çerçevesini ve PLAIN mekanizmasını kullanan kimlik doğrulama mekanizmasını SASL/PLAIN olarak ifade edebiliriz. Bu yazıda yukarıdaki mekanizmalardan kurulumu en kolay ve yaygın olan SASL/PLAIN mekanizmasını kullanacağız.</p>
+            </div>
+            <div class="post">
+                <h1>5. SASL/PLAIN ile Authentication</h1>
+                <p>SASL kimlik doğrulamasını etkinleştiren herhangi bir Kafka sunucusuna bağlanan istemciler, bağlantı kurdukları esnada kullanıcı adı ve şifresini sunucuya iletmek zorunda kalacaklar. SASL/PLAIN durumunda, sunucu istemcileri kimlik doğrulamak için kullanıcı adı ve parola sağlamaları konusunda zorlar. İstemci, sunucunun isteğini kabul etmeden önce geçerli bir kimlik bilgisi çiftini sunucuya istek olarak göndermelidir.</p>
+                <p>Java tabanlı istemciler, çoğunlukla SASL sürecini yönetmek için Java Kimlik Doğrulama ve Yetkilendirme Hizmetini (JAAS) kullanır. Örneğin, Apache Kafka kurulumunun /bin dizinindeki kafka-topics.sh ve kafka-console-producer.sh gibi istemciler, kimlik doğrulama amaçları için JAAS kullanır. Somut olarak, istemcinin JAAS’ını sasl.jaas.config yapılandırma anahtarı aracılığıyla yapılandırabiliriz.</p>
+            </div>
+            <div class="post">
+                <h1>6. Uygulama</h1>
+                <p>Yukarıdaki açıklamalar doğrultusunda bir kafka sunucusu ayağa kaldırıp Authentication ve Authorization işlemlerini gerçekleyeceğiz. Örneklerimizi Ubuntu 22.04.4 üzerinde yapacağız. Kafka JVM tabanlı bir uygulama olduğundan öncelikle bir jre’ye ihtiyacımız olacak. Bu yazıda jdk-17 ile çalışacağız.</p>
+                <pre><code>sudo apt-get update
+sudo apt install openjdk-17-jdk -y
+</code></pre>
+                <p>Ardından <a href="https://kafka.apache.org/downloads">https://kafka.apache.org/downloads</a> sitesine gidip güncel kafka sürümünü indiriyoruz. Bu yazıda kafka 3.7.1 sürümü için işlem yapacağız.</p>
+                <pre><code>wget https://downloads.apache.org/kafka/3.7.1/kafka_2.13-3.7.1.tgz
+tar -xvf kafka_2.13–3.7.1.tgz
+sudo mv kafka_2.13–3.7.1 /opt/kafka
+</code></pre>
+                <p>kafkadaki topic, consumer-group, offset ve metadata verilerimizin saklanması için aşağıdaki dizinleri oluşturuyoruz.</p>
+                <pre><code>mkdir /opt/kafka/data
+mkdir /opt/kafka/logs_metadata
+</code></pre>
+                <p>kafka kullanırken Kraft modunda kullanacağız bunun için config dizini altındaki Kraft dizinindeki server1.properties dosyasını düzenleyeceğiz. Kafka ile birlikte varsayılan ayarlar server.properties dosyasında bulunmaktadır ancak biz yeni bir dosya ile çalışacağız. Bunun için aşağıdaki komut ile yeni dosyamızı oluşalım.</p>
+                <pre><code>sudo nano config/kraft/server1.properties
+</code></pre>
+                <pre><code>#config/kraft/server1.properties
+node.id=1
+num.network.threads=3
+num.io.threads=8
+log.dirs=/opt/kafka/data
+metadata.log.dir=/opt/kafka/logs_metadata
+process.roles=broker,controller
+listeners=BROKER://serverip:9092,CONTROLLER://serverip:9093
+advertised.listeners=BROKER://serverip:9092
+listener.security.protocol.map=BROKER:SASL_PLAINTEXT,CONTROLLER:SASL_PLAINTEXT
+controller.quorum.voters=1@serverip:9093
+inter.broker.listener.name=BROKER
+controller.listener.names=CONTROLLER
+sasl.enabled.mechanisms=PLAIN
+sasl.mechanism.controller.protocol=PLAIN
+sasl.mechanism.inter.broker.protocol=PLAIN
+authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer
+allow.everyone.if.no.acl.found=false
+super.users=User:admin
+delete.topic.enable=true
+socket.send.buffer.bytes=1048576
+socket.receive.buffer.bytes=1048576
+socket.request.max.bytes=104857600
+num.partitions=3
+default.replication.factor=1
+min.insync.replicas=1
+log.retention.hours=168
+log.segment.bytes=1073741824
+log.retention.check.interval.ms=300000
+auto.create.topics.enable=true
+unclean.leader.election.enable=false
+offsets.topic.replication.factor=1
+transaction.state.log.replication.factor=1
+transaction.state.log.min.isr=1
+</code></pre>
+                <p>Kafka Kraft modunda başlatabilmemiz için öncelikte rastgele bir anahtar üretip storage format işlemi yapacağız.</p>
+                <pre><code>/opt/kafka/bin/kafka-storage.sh random-uuid
+
+/opt/kafka/bin/kafka-storage.sh format -t burayarastgeleanahtar -c /opt/kafka/config/kraft/server1.properties
+</code></pre>
+                <p>Kafka da Authentication yapacak kullanıcıları kafka içerisinde saklamamız gerekecek bunun için jaas.config isimli bir dosya oluşturup kafka çalışmaya başladığında enviroment olarak bu dosyayı göndereceğiz. Kafka kullanıcıları bu dosya içerisinde saklamaktadır. Örneğin username test password test olan kullanıcı için user_test=”test” tanımı yapılmıştır.</p>
+                <pre><code>sudo nano /opt/kafka/config/kraft/jaas.config
+</code></pre>
+                <pre><code>#/opt/kafka/config/kraft/jaas.config
+
+KafkaServer {
+org.apache.kafka.common.security.plain.PlainLoginModule required
+username="admin"
+password="admin"
+user_admin="admin"
+user_test="test";
+};
+</code></pre>
+                <p>Kafka servisimiz başladığında operasyonları yönetebilmemiz için admin kullanıcısına ihtiyacımız olacak aksi durumda topic oluşturma işlemlerini de yaparken erişim hatası alacaktır.</p>
+                <pre><code>sudo nano /opt/kafka/config/kraft/admin.config
+</code></pre>
+                <pre><code>#/opt/kafka/config/kraft/admin.config
+
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="admin";
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+</code></pre>
+                <p>Şimdide kafka için servis oluşturacağız.</p>
+                <pre><code>sudo nano /etc/systemd/system/kafka.service
+</code></pre>
+                <pre><code>#/etc/systemd/system/kafka.service
+
+[Unit]
+Description=kafka Service
+After=network-online.target
+Requires=network-online.target
+[Service]
+Type=simple
+Restart=on-failure
+User=root
+Group=root
+SyslogIdentifier=kafka
+Environment="KAFKA_HEAP_OPTS=-Xms1G -Xmx1G"
+Environment="KAFKA_OPTS=-Djava.security.auth.login.config=/opt/kafka/config/kraft/jaas.config"
+ExecStart=/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kraft/server1.properties
+ExecStop=/opt/kafka/bin/kafka-server-stop.sh /opt/kafka/config/kraft/server1.properties
+WorkingDirectory=/opt/kafka
+[Install]
+WantedBy=multi-user.target
+</code></pre>
+                <p>Servisi aktif edelim</p>
+                <pre><code>systemctl daemon-reload
+systemctl enable --now kafka
+systemctl status kafka
+</code></pre>
+                <p>Kafka kurulumu işlemlerimiz tamamlandı admin olarak bir topic oluşturmayı deneyelim. Bunun için aşağıdaki komutu geçeceğiz. Normal bir topic oluşturma işleminin yanı sıra komutumuza — command-config ekledik burada admin kullanıcı bilgilerini kullanarak topic oluşturacak.</p>
+                <pre><code>/opt/kafka/bin/kafka-topics.sh --bootstrap-server serverip:9092 --create --topic newtopic --partitions 2 --command-config /opt/kafka/config/kraft/admin.config
+</code></pre>
+                <p>Örneklerimizi genişletmek için konfigürasyonlarda test kullanıcına ilişkin bir bilgi kaydetmiştik bu kullanıcının login konfigürasyonunu oluşturup newtopic’e consumer olalım.</p>
+                <pre><code>sudo nano config/kraft/test-user.config
+</code></pre>
+                <pre><code>#config/kraft/test-user.config
+
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="test" password="test";
+security.protocol=SASL_PLAINTEXT
+sasl.mechanism=PLAIN
+</code></pre>
+                <pre><code>/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server serverip:9092 --group group1 --from-beginning --topic newtopic --consumer.config ./config/kraft/test-user.config
+</code></pre>
+                <p>Bu komutu çalıştırdığımızda kafka bizi aşağıdaki mesaj ile uyaracaktır.</p>
+                <pre><code>ERROR [Consumer clientId=console-consumer, groupId=group1] Topic authorization failed for topics [newtopic] (org.apache.kafka.clients.Metadata)
+[2024–07–08 12:25:53,609] ERROR Error processing message, terminating consumer process: (kafka.tools.ConsoleConsumer$)
+org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [newtopic]
+Processed a total of 0 messages
+</code></pre>
+                <p>Her ne kadar bir kullanıcımız olsa da bu kullanımız bu topic üzerinde herhangi bir yetkisi bulunmamaktadır. Kullanıcıyı yetkilendirmek için aşağıdaki komutları geçmemiz gerekecek.</p>
+                <pre><code>/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --add --allow-principal User:test --operation All --topic newtopic
+</code></pre>
+                <p>Burada admin kullanıcısını kullanarak test kullanıcısına newtopic üzerinde işlem yapabilme yetkilerini tanımlamış olduk ancak bu yetkilendirme tam olarak yeterli olmayacaktır aynı kullanıcıya hangi consumer grupları üzerinde yetkili olacağına da atama yapmamız gerekecek</p>
+                <pre><code>/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --add --allow-principal User:test --operation All --group '*'
+</code></pre>
+                <p>Burada kullanıcımıza bütün consumer gruplarında sadece newtopic üzerinde bütün işlemleri yapabilme yetkisi tanımlamış olduk.</p>
+                <pre><code>/opt/kafka/bin/kafka-acls.sh - bootstrap-server serverip:9092 --list --command-config /opt/kafka/config/kraft/admin.config
+</code></pre>
+                <p>Komutu ile yetkileri listeyebiliriz. Yetkileri kaldırmak için aşağıdaki komutu geçmemiz gerekecek.</p>
+                <pre><code>/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --remove --allow-principal User:test --operation Write --topic newtopic
+</code></pre>
+                <p>Bir topic için bir kullanıcıya verilebilecek yetkiler aşağıdaki gibidir:</p>
+                <ul>
+                    <li>Describe: Konunun meta verilerini görüntüleme izni.</li>
+                    <li>Read: Konudan mesajları okuma izni.</li>
+                    <li>Write: Konuya mesaj yazma izni.</li>
+                    <li>Create: Yeni bir konu oluşturma izni.</li>
+                    <li>Delete: Var olan bir konuyu silme izni.</li>
+                    <li>Alter: Konunun yapılandırmasını değiştirme izni.</li>
+                    <li>DescribeConfigs: Konunun yapılandırma bilgilerini görüntüleme izni.</li>
+                    <li>AlterConfigs: Konunun yapılandırma bilgilerini değiştirme izni.</li>
+                </ul>
+                <p>Consumer gruplar için verilebilecek başlıca yetkiler ise şunlardır:</p>
+                <ul>
+                    <li>Read: Konudan mesajları okuma izni.</li>
+                    <li>Describe: Consumer grubunun meta verilerini görüntüleme izni.</li>
+                    <li>Delete: Consumer grubunu silme izni.</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
