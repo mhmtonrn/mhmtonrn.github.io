@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kafka Authentication ve Authorization</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMXZsbT1Z7l+2xq6DkC1aA8VZwE8N8IzAuZkMv0" crossorigin="anonymous">
+    <link rel="stylesheet" href="./share/prism.css" />
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -140,22 +141,22 @@
             <div class="post">
                 <h1>6. Uygulama</h1>
                 <p>Yukarıdaki açıklamalar doğrultusunda bir kafka sunucusu ayağa kaldırıp Authentication ve Authorization işlemlerini gerçekleyeceğiz. Örneklerimizi Ubuntu 22.04.4 üzerinde yapacağız. Kafka JVM tabanlı bir uygulama olduğundan öncelikle bir jre’ye ihtiyacımız olacak. Bu yazıda jdk-17 ile çalışacağız.</p>
-                <pre><code>sudo apt-get update
+                <pre><code class="language-bash">sudo apt-get update
 sudo apt install openjdk-17-jdk -y
 </code></pre>
                 <p>Ardından <a href="https://kafka.apache.org/downloads">https://kafka.apache.org/downloads</a> sitesine gidip güncel kafka sürümünü indiriyoruz. Bu yazıda kafka 3.7.1 sürümü için işlem yapacağız.</p>
-                <pre><code>wget https://downloads.apache.org/kafka/3.7.1/kafka_2.13-3.7.1.tgz
+                <pre><code class="language-bash">wget https://downloads.apache.org/kafka/3.7.1/kafka_2.13-3.7.1.tgz
 tar -xvf kafka_2.13–3.7.1.tgz
 sudo mv kafka_2.13–3.7.1 /opt/kafka
 </code></pre>
                 <p>kafkadaki topic, consumer-group, offset ve metadata verilerimizin saklanması için aşağıdaki dizinleri oluşturuyoruz.</p>
-                <pre><code>mkdir /opt/kafka/data
+                <pre><code class="language-bash">mkdir /opt/kafka/data
 mkdir /opt/kafka/logs_metadata
 </code></pre>
                 <p>kafka kullanırken Kraft modunda kullanacağız bunun için config dizini altındaki Kraft dizinindeki server1.properties dosyasını düzenleyeceğiz. Kafka ile birlikte varsayılan ayarlar server.properties dosyasında bulunmaktadır ancak biz yeni bir dosya ile çalışacağız. Bunun için aşağıdaki komut ile yeni dosyamızı oluşalım.</p>
-                <pre><code>sudo nano config/kraft/server1.properties
+                <pre><code class="language-bash">sudo nano config/kraft/server1.properties
 </code></pre>
-                <pre><code>#config/kraft/server1.properties
+                <pre><code class="language-bash">#config/kraft/server1.properties
 node.id=1
 num.network.threads=3
 num.io.threads=8
@@ -191,14 +192,14 @@ transaction.state.log.replication.factor=1
 transaction.state.log.min.isr=1
 </code></pre>
                 <p>Kafka Kraft modunda başlatabilmemiz için öncelikte rastgele bir anahtar üretip storage format işlemi yapacağız.</p>
-                <pre><code>/opt/kafka/bin/kafka-storage.sh random-uuid
+                <pre><code class="language-bash">/opt/kafka/bin/kafka-storage.sh random-uuid
 
 /opt/kafka/bin/kafka-storage.sh format -t burayarastgeleanahtar -c /opt/kafka/config/kraft/server1.properties
 </code></pre>
                 <p>Kafka da Authentication yapacak kullanıcıları kafka içerisinde saklamamız gerekecek bunun için jaas.config isimli bir dosya oluşturup kafka çalışmaya başladığında enviroment olarak bu dosyayı göndereceğiz. Kafka kullanıcıları bu dosya içerisinde saklamaktadır. Örneğin username test password test olan kullanıcı için user_test=”test” tanımı yapılmıştır.</p>
-                <pre><code>sudo nano /opt/kafka/config/kraft/jaas.config
+                <pre><code class="language-bash">sudo nano /opt/kafka/config/kraft/jaas.config
 </code></pre>
-                <pre><code>#/opt/kafka/config/kraft/jaas.config
+                <pre><code class="language-bash">#/opt/kafka/config/kraft/jaas.config
 
 KafkaServer {
 org.apache.kafka.common.security.plain.PlainLoginModule required
@@ -209,18 +210,18 @@ user_test="test";
 };
 </code></pre>
                 <p>Kafka servisimiz başladığında operasyonları yönetebilmemiz için admin kullanıcısına ihtiyacımız olacak aksi durumda topic oluşturma işlemlerini de yaparken erişim hatası alacaktır.</p>
-                <pre><code>sudo nano /opt/kafka/config/kraft/admin.config
+                <pre><code class="language-bash">sudo nano /opt/kafka/config/kraft/admin.config
 </code></pre>
-                <pre><code>#/opt/kafka/config/kraft/admin.config
+                <pre><code class="language-bash">#/opt/kafka/config/kraft/admin.config
 
 sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="admin";
 security.protocol=SASL_PLAINTEXT
 sasl.mechanism=PLAIN
 </code></pre>
                 <p>Şimdide kafka için servis oluşturacağız.</p>
-                <pre><code>sudo nano /etc/systemd/system/kafka.service
+                <pre><code class="language-bash">sudo nano /etc/systemd/system/kafka.service
 </code></pre>
-                <pre><code>#/etc/systemd/system/kafka.service
+                <pre><code class="language-bash">#/etc/systemd/system/kafka.service
 
 [Unit]
 Description=kafka Service
@@ -241,41 +242,41 @@ WorkingDirectory=/opt/kafka
 WantedBy=multi-user.target
 </code></pre>
                 <p>Servisi aktif edelim</p>
-                <pre><code>systemctl daemon-reload
+                <pre><code class="language-bash">systemctl daemon-reload
 systemctl enable --now kafka
 systemctl status kafka
 </code></pre>
                 <p>Kafka kurulumu işlemlerimiz tamamlandı admin olarak bir topic oluşturmayı deneyelim. Bunun için aşağıdaki komutu geçeceğiz. Normal bir topic oluşturma işleminin yanı sıra komutumuza — command-config ekledik burada admin kullanıcı bilgilerini kullanarak topic oluşturacak.</p>
-                <pre><code>/opt/kafka/bin/kafka-topics.sh --bootstrap-server serverip:9092 --create --topic newtopic --partitions 2 --command-config /opt/kafka/config/kraft/admin.config
+                <pre><code class="language-bash">/opt/kafka/bin/kafka-topics.sh --bootstrap-server serverip:9092 --create --topic newtopic --partitions 2 --command-config /opt/kafka/config/kraft/admin.config
 </code></pre>
                 <p>Örneklerimizi genişletmek için konfigürasyonlarda test kullanıcına ilişkin bir bilgi kaydetmiştik bu kullanıcının login konfigürasyonunu oluşturup newtopic’e consumer olalım.</p>
-                <pre><code>sudo nano config/kraft/test-user.config
+                <pre><code class="language-bash">sudo nano config/kraft/test-user.config
 </code></pre>
-                <pre><code>#config/kraft/test-user.config
+                <pre><code class="language-bash">#config/kraft/test-user.config
 
 sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="test" password="test";
 security.protocol=SASL_PLAINTEXT
 sasl.mechanism=PLAIN
 </code></pre>
-                <pre><code>/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server serverip:9092 --group group1 --from-beginning --topic newtopic --consumer.config ./config/kraft/test-user.config
+                <pre><code class="language-bash">/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server serverip:9092 --group group1 --from-beginning --topic newtopic --consumer.config ./config/kraft/test-user.config
 </code></pre>
                 <p>Bu komutu çalıştırdığımızda kafka bizi aşağıdaki mesaj ile uyaracaktır.</p>
-                <pre><code>ERROR [Consumer clientId=console-consumer, groupId=group1] Topic authorization failed for topics [newtopic] (org.apache.kafka.clients.Metadata)
+                <pre><code class="language-bash">ERROR [Consumer clientId=console-consumer, groupId=group1] Topic authorization failed for topics [newtopic] (org.apache.kafka.clients.Metadata)
 [2024–07–08 12:25:53,609] ERROR Error processing message, terminating consumer process: (kafka.tools.ConsoleConsumer$)
 org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [newtopic]
 Processed a total of 0 messages
 </code></pre>
                 <p>Her ne kadar bir kullanıcımız olsa da bu kullanımız bu topic üzerinde herhangi bir yetkisi bulunmamaktadır. Kullanıcıyı yetkilendirmek için aşağıdaki komutları geçmemiz gerekecek.</p>
-                <pre><code>/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --add --allow-principal User:test --operation All --topic newtopic
+                <pre><code class="language-bash">/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --add --allow-principal User:test --operation All --topic newtopic
 </code></pre>
                 <p>Burada admin kullanıcısını kullanarak test kullanıcısına newtopic üzerinde işlem yapabilme yetkilerini tanımlamış olduk ancak bu yetkilendirme tam olarak yeterli olmayacaktır aynı kullanıcıya hangi consumer grupları üzerinde yetkili olacağına da atama yapmamız gerekecek</p>
-                <pre><code>/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --add --allow-principal User:test --operation All --group '*'
+                <pre><code class="language-bash">/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --add --allow-principal User:test --operation All --group '*'
 </code></pre>
                 <p>Burada kullanıcımıza bütün consumer gruplarında sadece newtopic üzerinde bütün işlemleri yapabilme yetkisi tanımlamış olduk.</p>
-                <pre><code>/opt/kafka/bin/kafka-acls.sh - bootstrap-server serverip:9092 --list --command-config /opt/kafka/config/kraft/admin.config
+                <pre><code class="language-bash">/opt/kafka/bin/kafka-acls.sh - bootstrap-server serverip:9092 --list --command-config /opt/kafka/config/kraft/admin.config
 </code></pre>
                 <p>Komutu ile yetkileri listeyebiliriz. Yetkileri kaldırmak için aşağıdaki komutu geçmemiz gerekecek.</p>
-                <pre><code>/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --remove --allow-principal User:test --operation Write --topic newtopic
+                <pre><code class="language-bash">/opt/kafka/bin/kafka-acls.sh --bootstrap-server serverip:9092 --command-config /opt/kafka/config/kraft/admin.config --remove --allow-principal User:test --operation Write --topic newtopic
 </code></pre>
                 <p>Bir topic için bir kullanıcıya verilebilecek yetkiler aşağıdaki gibidir:</p>
                 <ul>
@@ -298,4 +299,5 @@ Processed a total of 0 messages
         </main>
     </div>
 </body>
+<script src="./share/prism.js"></script>
 </html>

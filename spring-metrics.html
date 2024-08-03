@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242"
+        crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Authentication ve Authorization</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+        integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMXZsbT1Z7l+2xq6DkC1aA8VZwE8N8IzAuZkMv0" crossorigin="anonymous">
+    <link rel="stylesheet" href="./share/prism.css" />
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #444;
+        }
+
+        nav a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        nav a:hover {
+            background-color: #555;
+        }
+
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+
+        .content {
+            margin-top: 20px;
+        }
+
+        .post {
+            background: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .post h1,
+        .post h2,
+        .post h3 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .post h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .post h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .post h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .post p {
+            margin: 0 0 10px 0;
+        }
+
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Spring Boot & Custom Gauge Metrics & Prometheus & Grafana</h1>
+    </header>
+    <nav>
+        <a href="/#home">Ana Sayfa</a>
+        <a href="/#contact">İletişim</a>
+    </nav>
+    <div class="container">
+        <div class="content">
+
+            <div class="post">
+                <p>Bu yazımızda Spring Boot frameworku ile geliştirdiğimiz servisimizden micrometer kütüphanesini
+                    kullanarak özelleştirdiğimiz metrikleri uygulamamızdan yayınlayacak, prometheus ile kaydedip,
+                    grafana da görselleştireceğiz.</p>
+                <p>
+                    Gereksinimler:
+                <ul>
+                    <li>JDK 17</li>
+                    <li>Maven 3.8</li>
+                    <li>Docker engine</li>
+                </ul>
+                </p>
+                <p>Uygulamanın tamamlanmış haline buradan erişebilirsiniz.</p>
+            </div>
+
+            <div class="post">
+                <p>Bilindiği üzere Spring Boot frameworku ile uygulama geliştirdiğimizde metriklerimizi micrometer
+                    yardımı ile kolayca dışarıya çıkarabilyor, prometheus ile bu verileri toplayabiliyoruz. Ancak
+                    dışarıya çıkardığımız bu metrikler spring uygulamasının ürettiği http istek sayıları, jvm heap
+                    durumu, cpu değerleri gibi metriklerdir. Bu yazımızda spring uygulamasının üretemeyeceği
+                    özelleştirilmiş metriklerimizi dışarıya çıkaracağız.</p>
+                <p>Micrometer sitesinde Counters, Gauges, Timers, Distribution Summaries gibi metrik tiplerine ilişkin
+                    dökümanlar bulunmaktadır. Hepsinin farklı kullanım alanları bulunmaktadır. Ancak biz yazımızda Gauge
+                    metrik tipine odaklanacağız. Bu metrik tipi ile doğal alt ve üst sınır değerleri dışarıya
+                    çıkarıyoruz. Örneğin bellek durumu veya anlık hava durumu veya uygulamamızdaki anlık kullanıcı
+                    sayısı gibi. Micrometer sitesinde özellikle sürekli artan değerler için bu metriği kullanmamanızı
+                    tavsiye ediyor.</p>
+                <p>Öncelikle Spring Boot servisimizi hazırlayalım. Uygulamanın metrik üretebilmesi için gereken
+                    bağımlılıkları aşağıdaki gibi olmalı.</p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-xml">
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+        &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
+        &lt;scope&gt;runtime&lt;/scope&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+        &lt;artifactId&gt;lombok&lt;/artifactId&gt;
+        &lt;optional&gt;true&lt;/optional&gt;
+    &lt;/dependency&gt;
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>Uygulamanın üreteceği metrik türlerinin prometheus tarafından toplanabilmesine imkan vermek için
+                    application.properties dosyamıza aşağıdaki değeri eklememiz gerekmektedir.</p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-git">
+    management.endpoints.web.exposure.include=health,info,prometheus
+                    </code>
+                </pre>
+            </div>
+
+
+
+            <div class="post">
+                <p>Uygulamayı bu hali ile çalıştırdığımızda http://localhost:8080/actuator/prometheus adresinden
+                    prometheus tarafından toplanmaya uygun değerleri üretmiş olacaktır. listelenecek değerler aşağıdaki
+                    gibi olacaktır.</p>
+            </div>
+
+            <div class="post">
+                <img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*L4YLxDX1ArbDInVfKAvu3g.png" alt="">
+            </div>
+
+            <div class="post">
+                <p>Burada görmüş olduğunuz değerler spring tarafından üretilmiş değerlerdir. buraya kendi ürettimiz
+                    değeri ekleyebilmemiz için io.micrometer.core paketi altında bulunan ve otomatik konfigurasyonu
+                    yapılmış IOC içerisinde bulunan MeterRegistry ile gauge metriğimizi tanımlıyoruz. Uygulamamızdan 0
+                    ile 100 arasıda rastgele değer üretip göndereceğiz.</p>
+            </div>
+
+            <div class="post">
+                <pre >
+                    <code class="language-java">
+    import io.micrometer.core.instrument.MeterRegistry;
+    import lombok.RequiredArgsConstructor;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.scheduling.annotation.EnableScheduling;
+    import org.springframework.scheduling.annotation.Scheduled;
+    import org.springframework.stereotype.Component;
+
+    import javax.annotation.PostConstruct;
+    import java.util.List;
+    import java.util.concurrent.ThreadLocalRandom;
+    import java.util.concurrent.atomic.AtomicInteger;
+
+    @Component
+    @RequiredArgsConstructor
+    @EnableScheduling
+    public class MetricsService {
+        private AtomicInteger meter;
+
+        @Autowired
+        public MetricsService(MeterRegistry meterRegistry){
+            this.meter = meterRegistry.gauge("random.number.metrics", 
+                    new AtomicInteger(0));
+        }
+
+        @Scheduled(fixedRate = 2000)
+        public void postMetric(){
+            meter.set(ThreadLocalRandom.current().nextInt(100));
+        }
+
+    }
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>Yukarıdaki MetricService bellekte oluşturulduğu anda MeterRegistry objesi içerinden gelen gauge
+                    metodunu kullanarak metriğimizi hazırlıyoruz.</p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-java">
+    meterRegistry.gauge("random.number.metrics", new AtomicInteger(0));
+                    </code>
+                </pre>
+            </div>
+
+
+            <div class="post">
+                <p>Burada ilk parametre metriğin ismini nitelemektedir. Bu isim prometheus tarafıdan key olarak
+                    toplanacaktır. 2. parametre ise metriğin değeridir. Uygulanın bu kısmı çalıştığında üretilecek olan
+                    metrik 0 olacaktır. Daha sonra bu metriği günceleyebilmek için new AtomicInteger(0)) tanımı
+                    yapıldıktan sonraki referansa ihtiyacımız olacaktır. Gauge metriği güncellenmebilemesi için bu
+                    referansa ihtiyac duyar. Uygulamamız artık 2 saniye ara ile
+                    http://localhost:8080/actuator/prometheus adresinde random_number_metrics adında bir değer
+                    üretecektir.</p>
+                <br>
+                <p>Uygulama artık metrik üretebildiğine göre prometheus ile bu değerleri toplayabiliriz. Prometheusu
+                    docker ile çalıştıracağımızdan uygulamamızı da dockerize edip aynı networkte çalışmalarını
+                    sağlayacağız. docker-compose.yml dosyamızı aşağıdaki gibi düzenliyoruz.</p>
+            </div>
+
+
+            <div class="post">
+                <pre>
+                    <code class="language-git">
+    version: '2.1'
+
+    networks:
+    monitor-net:
+        driver: bridge
+
+    volumes:
+        prometheus_data: {}
+
+    services:
+    metric-service:
+        container_name: metric-service
+        image: monar2/metric-service
+        networks:
+        - monitor-net
+        build: ../
+        ports:
+        - "8080:8080"
+
+    prometheus:
+        container_name: prometheus
+        hostname: prometheus
+        image: prom/prometheus
+        networks:
+        - monitor-net
+        volumes:
+        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        - prometheus_data:/prometheus
+        command:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        ports:
+        - "9090:9090"
+        links:
+        -  metric-service
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>uygulamanın docker ile build edilebilmesi için Dockerfile aşağıdaki gibi düzenliyoruz.</p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-git">
+    FROM openjdk:17-jdk-alpine
+    RUN addgroup -S spring && adduser -S spring -G spring
+    USER spring:spring
+    ARG JAR_FILE=target/*.jar
+    COPY ${JAR_FILE} app.jar
+    EXPOSE 8080
+    ENTRYPOINT ["java","-jar","/app.jar"]
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <pre>
+    <code class="language-git" >docker-compose -f docker-compose.yml up</code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>komutunu terminalde çalıştırdığımızda artık prometheus ve metric-service uygulaması çalışabilir hale
+                    gelecektir. prometheus 9090 portunda çalıştığını gördükten sonra
+                    http://localhost:9090/targets?search= adresinde metrik topladığı endpointleri listeleyecektir.</p>
+                <br>
+                <img src="https://miro.medium.com/v2/resize:fit:786/format:webp/1*xlw070s5ViJUw-ecsedaEA.png" alt="">
+                <br>
+                <p>prometheusun hangi adresten metrik toplayacağını tanımlamak için prometheus.yml dosyasında job
+                    tanımını yapmamız gerekmetedir. prometheus.yml dosyası aşağıdaki gibi olmalıdır.</p>
+            </div>
+
+
+            <div class="post">
+                <pre>
+                    <code class="language-git">
+    global:
+
+    scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+    evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+
+    scrape_configs:
+    - job_name: 'spring boot scrape'
+        metrics_path: '/actuator/prometheus'
+        scrape_interval: 5s
+        static_configs:
+        - targets: ['metric-service:8080']
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>Grafana uygulamasınıda prometheusda olduğu gibi docker ile çalıştıracağız. docker-compose.yml
+                    dosyasına grafanayı ekleyip yeniden başlatmamız gerekmektedir.</p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-git">
+    version: '2.1'
+
+    networks:
+    monitor-net:
+        driver: bridge
+
+    volumes:
+        prometheus_data: {}
+        grafana_data: {}
+
+    services:
+
+    metric-service:
+        container_name: metric-service
+        image: monar2/metric-service
+        networks:
+        - monitor-net
+        build: ../
+        ports:
+        - "8080:8080"
+
+    prometheus:
+        container_name: prometheus
+        hostname: prometheus
+        image: prom/prometheus
+        networks:
+        - monitor-net
+        volumes:
+        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        - prometheus_data:/prometheus
+        command:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        ports:
+        - "9090:9090"
+        links:
+        -  metric-service
+
+    grafana:
+        container_name: grafana
+        hostname: grafana
+        image: grafana/grafana
+        networks:
+        - monitor-net
+        ports:
+        - "3000:3000"
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>Grafana 3000 portunda çalışacaktır. Ayarlar bölümünden data source tabından add data source ile
+                    prometheus veri kaynağını seçip url bilgilerini eklememiz gerekmektedir. Grafana ve Prometheus
+                    docker container içerisinde çalıştığından url bilgisi tanımlarken localhost:9090 yerine
+                    prometheus:9090 yazılmalıdır.</p>
+                <br>
+                <img src="https://miro.medium.com/v2/resize:fit:786/format:webp/1*dcDFunLw-rz1xqMgzId9LA.png" alt="">
+                <br>
+                <p>Dashbord sekmesinden new dashboard daha sonra add panel diyerek panel ekleme sayfasını açıp paneli
+                    düzenleyebiliriz. metric alanından tanımladığımız metriği aratıp ekleyebiliriz. Gauge tipinde bir
+                    panel olarak ayarlarmasını yaptıktan sonra görüntü aşağıdaki gibi olacaktır.</p>
+                <img src="https://miro.medium.com/v2/resize:fit:720/format:webp/1*MMirXl2PtT9zVuQpdeLydQ.png" alt="">
+            </div>
+
+        </div>
+</body>
+<script src="./share/prism.js"></script>
+
+</html>
