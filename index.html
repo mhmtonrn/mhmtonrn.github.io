@@ -56,34 +56,37 @@
         .content {
             margin-top: 20px;
         }
+        .post-wrapper a {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            margin-bottom: 20px;
+        }
         .post {
-            background: linear-gradient(135deg, #ffffff, #f9f9f9);
+            background: linear-gradient(135deg,  #e6e4e4,rgb(200, 200, 202));
             border: 1px solid #ddd;
             border-radius: 8px;
-            margin-bottom: 20px;
             padding: 20px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+            color: #cfcaca;
         }
         .post:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);  
+            background: linear-gradient(135deg, #e4bca1, #d2e69d);
         }
         .post h2 {
             margin: 0;
             color: #444;
         }
-        .post a {
-            color: inherit;
-            text-decoration: none;
-        }
-        .post a:hover {
-            text-decoration: none;
-            color: inherit;
+        .post p {
+            color: #444;
         }
         #contact {
             background: white;
-            margin-bottom: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
             padding: 20px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
@@ -116,7 +119,7 @@
             background-color: #333;
             color: white;
             text-align: center;
-            padding: 0 0;
+            padding: 10px 0;
             position: fixed;
             bottom: 0;
             width: 100%;
@@ -134,29 +137,30 @@
     </nav>
     <div class="container">
         <div class="content">
-            <div class="post">
+            <div class="post-wrapper">
                 <a href="kafka-securit.html">
-                    <h2>Kafka Authentication ve Authorization</h2>
+                    <div class="post">
+                        <h2>Kafka Authentication ve Authorization</h2>
+                        <p>Apache Kafka, gerçek zamanlı veri işleme hatları ve stream uygulamaları oluşturmak için güçlü bir platformdur. Bir Kafka clusterını production ortamında çalıştırırken, Apache Kafka’daki güvenlik özelliklerini uygulayarak kümenin güvenliğini sağlamalıyız. Kimlik doğrulama gerektiren bir Kafka...</p>
+                    </div>
                 </a>
-                <p>Apache Kafka, gerçek zamanlı veri işleme hatları ve stream uygulamaları oluşturmak için güçlü bir platformdur. Bir Kafka clusterını production ortamında çalıştırırken, Apache Kafka’daki güvenlik özelliklerini uygulayarak kümenin güvenliğini sağlamalıyız. Kimlik doğrulama gerektiren bir Kafka...</p>
             </div>
-
-            <div class="post">
-              <a href="redis-lock.html">
-                  <h2>Dağıtık Mimaride Redis İle Metotların Senkronize Edilmesi</h2>
-              </a>
-              <p>Bu yazımızda farklı sunucular/düğümler üstünde çalışan uygulamalarımızda bir metotun redis cache ile nasıl senkronize edilebileceği konusuna değineceğiz.Mikroservis mimarilerinin yaygınlaşması ile birlikte uygulamalarımızı yatay olarak genişletebiliyor, aynı uygulamanın yüzlerce örneğini oluşt...</p>
+            <div class="post-wrapper">
+                <a href="redis-lock.html">
+                    <div class="post">
+                        <h2>Dağıtık Mimaride Redis İle Metotların Senkronize Edilmesi</h2>
+                        <p>Bu yazımızda farklı sunucular/düğümler üstünde çalışan uygulamalarımızda bir metotun redis cache ile nasıl senkronize edilebileceği konusuna değineceğiz.Mikroservis mimarilerinin yaygınlaşması ile birlikte uygulamalarımızı yatay olarak genişletebiliyor, aynı uygulamanın yüzlerce örneğini oluşt...</p>
+                    </div>
+                </a>
             </div>
-
-            
-            <div class="post">
-              <a href="spring-metrics.html">
-                  <h2>Spring Boot & Custom Gauge Metrics & Prometheus & Grafana</h2>
-              </a>
-              <p>Bu yazımızda Spring Boot frameworku ile geliştirdiğimiz servisimizden micrometer kütüphanesini kullanarak özelleştirdiğimiz metrikleri uygulamamızdan yayınlayacak, prometheus ile kaydedip, grafana da görselleştireceğiz.</p>
+            <div class="post-wrapper">
+                <a href="spring-metrics.html">
+                    <div class="post">
+                        <h2>Spring Boot & Custom Gauge Metrics & Prometheus & Grafana</h2>
+                        <p>Bu yazımızda Spring Boot frameworku ile geliştirdiğimiz servisimizden micrometer kütüphanesini kullanarak özelleştirdiğimiz metrikleri uygulamamızdan yayınlayacak, prometheus ile kaydedip, grafana da görselleştireceğiz.</p>
+                    </div>
+                </a>
             </div>
-           
-            <!-- Daha fazla yazı buraya ekleyebilirsiniz -->
         </div>
     </div>
     <div class="container">
