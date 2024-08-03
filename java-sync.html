@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242"
+        crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAVA SYNCHRONIZED</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+        integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOMXZsbT1Z7l+2xq6DkC1aA8VZwE8N8IzAuZkMv0" crossorigin="anonymous">
+    <link rel="stylesheet" href="./share/prism.css" />
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #444;
+        }
+
+        nav a {
+            color: white;
+            padding: 14px 20px;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        nav a:hover {
+            background-color: #555;
+        }
+
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+
+        .content {
+            margin-top: 20px;
+        }
+
+        .post {
+            background: white;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .post h1,
+        .post h2,
+        .post h3 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .post h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .post h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .post h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .post p {
+            margin: 0 0 10px 0;
+        }
+
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>JAVA SYNCHRONIZED</h1>
+    </header>
+    <nav>
+        <a href="/#home">Ana Sayfa</a>
+        <a href="/#contact">İletişim</a>
+    </nav>
+    <div class="container">
+        <div class="content">
+
+            <div class="post">
+                <p>Bu yazımızda java web uygulaması ile bir kaynağa senkronize erişim ile ilgili farklı senaryoları deneyimlemiş olacağız.</p>
+                <p>
+                    Gereksinimler:
+                <ul>
+                    <li>JDK 1.8+</li>
+                    <li>Java uygulaması geliştirebileceğimiz herhangi bir ide.</li>
+                    <li>Maven 3.2+</li>
+                </ul>
+                </p>
+            </div>
+
+            <div class="post">
+                <p>Bilindiği üzere uygulamalarımızda hız kazanmak için multi processing yapıları kurmamız elzemdir. Farklı işlemlerin aynı kaynağa aynı anda erişmesi ise deadlock oluşmasına neden olur. Bir web uygulaması için gelen her istek bir worker oluşturur ve isteği iş sınıflarımıza iletilir. Bu nedenle aynı anda birden fazla kullanıcının istek yapılmasına imkan verilmiş olur. Varsayılan ayarları ile bir springboot web uygulaması ayağa kaldırdığımızda, tomcat uygulama sunucusu ön ayarlı olarak uygulama içerisinde gelmektedir. Uygulamaya locust yük testi toolunu kullanarak yoğun bir istek yapıp, mevcut threadlerin isimlerini yazdırdığımızda aşağıdaki gibi bir çıktı görüyoruz.</p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-hava">
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import java.time.LocalDateTime;
+    
+    @RestController
+    @Slf4j
+    public class SyncApiShowThreads {
+    
+        private int count = 0;
+    
+        @PostMapping("/hello/{param}")
+        public String hello(@PathVariable String param) throws InterruptedException {
+            log.info("thread name-{}",Thread.currentThread().getName());
+            Thread.sleep(100);
+            return  param+"\n";
+        }
+        
+    }
+    
+    /**
+    thread name-http-nio-8080-exec-29
+    thread name-http-nio-8080-exec-27
+    thread name-http-nio-8080-exec-23
+    thread name-http-nio-8080-exec-32
+    thread name-http-nio-8080-exec-30
+    thread name-http-nio-8080-exec-25
+    thread name-http-nio-8080-exec-42
+    thread name-http-nio-8080-exec-5
+    thread name-http-nio-8080-exec-10
+    thread name-http-nio-8080-exec-33
+    thread name-http-nio-8080-exec-4
+    thread name-http-nio-8080-exec-36
+    thread name-http-nio-8080-exec-37
+    thread name-http-nio-8080-exec-41
+    thread name-http-nio-8080-exec-26
+    thread name-http-nio-8080-exec-14
+    thread name-http-nio-8080-exec-48
+    thread name-http-nio-8080-exec-43
+    */
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>Çıktılarda gördüğünüz “http-nio-8080-exec-” ile başlayan threadler bizim requestlerimize cevap vermek için tomcat tarafından oluşturulmuş (org.apache.tomcat.util.threads.ThreadPoolExecutor) workerlardır ve asenkron çalışmaktadır.</p>
+            <br>
+            <p>Gelen isteklerin asenkron çalıştığını gösterebilmek için uygulamamızda aşağıdaki gibi bir değişiklik yaparak çıktıları inceleyelim.</p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-java">
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    @RestController
+    @Slf4j
+    public class SyncApiPrint {
+    
+    
+        @PostMapping("/hello/{param}")
+        public String hello(@PathVariable String param) throws InterruptedException {
+            log.info("thread name-{}",Thread.currentThread().getName());
+            print(param);
+            return  param+"\n";
+        }
+    
+        private void print(String param) throws InterruptedException {
+            for(int i = 5; i > 0; i--) {
+                Thread.sleep(100);
+                log.info("Counter   ---   "  + i );
+            }
+        }
+    }
+                    </code>
+                </pre>
+            </div>
+
+
+
+            <div class="post">
+                <pre>
+                    <code class="language-java">
+    hread name-http-nio-8080-exec-17
+    thread name-http-nio-8080-exec-18
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    thread name-http-nio-8080-exec-19
+    thread name-http-nio-8080-exec-21
+    Counter   ---   5
+    thread name-http-nio-8080-exec-20
+    thread name-http-nio-8080-exec-23
+    Counter   ---   1
+    thread name-http-nio-8080-exec-24
+    Counter   ---   5
+    Counter   ---   5
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    thread name-http-nio-8080-exec-26
+    thread name-http-nio-8080-exec-25
+    thread name-http-nio-8080-exec-27
+    thread name-http-nio-8080-exec-29
+    thread name-http-nio-8080-exec-28
+    thread name-http-nio-8080-exec-30
+    thread name-http-nio-8080-exec-22
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+    Counter   ---   1
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>Çıktıda görüldüğü gibi print() metotu birden fazla http-nio-8080-exec workerı tarafından aynı anda erişildiği için çıktılar düzensizdir.</p>
+                <br>
+                <p>Java uygulamalarında metotun aynı anda birden fazla worker tarafından erişilmesini engellemek için synchronized anahtar kelimesi kullanılır. Kodlarımızı synchronized anahtar kelimesini kullanarak yeniden düzenlediğimizde çıktı aşağıdaki gibi olmaktadır.</p>
+            </div>
+
+            <div class="post">
+                <pre >
+                    <code class="language-java">
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    @RestController
+    @Slf4j
+    public class SyncApiWithSynchronized {
+    
+    
+        @PostMapping("/hello/{param}")
+        public String hello(@PathVariable String param) throws InterruptedException {
+            print(param);
+            return  param+"\n";
+        }
+    
+        private synchronized void print(String param) throws InterruptedException {
+            log.info("thread name-{}",Thread.currentThread().getName());
+            for(int i = 5; i > 0; i--) {
+                Thread.sleep(100);
+                log.info("Counter   ---   "  + i );
+            }
+        }
+    }
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-java">
+    thread name-http-nio-8080-exec-1
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-50
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-49
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-48
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-47
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-46
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-45
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-44
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-43
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-40
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-41
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-39
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-42
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    thread name-http-nio-8080-exec-38
+    Counter   ---   5
+    Counter   ---   4
+    Counter   ---   3
+    Counter   ---   2
+    Counter   ---   1
+    .
+    .
+    .
+                    </code>
+                </pre>
+            </div>
+
+
+            <div class="post">
+                <p>Çıktıyı incelediğimizde yazdırdığımız değerlerin düzenli olduğu açıkca görünmektedir. Ancak burda büyük bir sorun var uygulamamızda print metoduna erişirken kullanıcıların bekleme süreleri çok uzadı. Metot senkronize olduğundan bir kullanıcı işini bitirmeden diğerleri print metodunu kullanamadı. Aşağıdaki grafikten görüldüğü üzere run#1 ile işaretlenmiş bölgede print metoduna asenkron erişirken run#2 bölümde senkron erişilmeye göre çok daha hızlı.</p>
+                <br>
+                <img src="https://miro.medium.com/v2/resize:fit:786/format:webp/1*3bNdqcXPG_jALXI5Ep-0tQ.png">
+                <br>
+                <p>Metotun senkronize anahtar kelimesi ile diğer treadler arasında deadlock olmadan çalışmasının bize belirli bir maliyeti var. Şimdi problemimizi yeniden şekillendirelim. Örneğin bir stok kaynağına erişen bir metod hayal edelim.
+
+                    </p>
+                <pre>
+                    <code class="language-java">
+    private synchronized boolean reduceFromStock(String productId){
+        //TODO some process
+        return true;
+    }
+                    </code>
+                </pre>
+            </div>
+
+
+            <div class="post">
+                <p>Görüldüğü üzere metot senkronize, workerlar aynı anda metota erişemeyeceğinden uygulamamız sorunsuz çalışacaktır. Ancak workerlar bir birini bekledikleri için büyük bir performans kaybı yaşayacağız. Burda dikkat edilmesi gereken bir diğer husus farklı ürünlerin stoklarını azaltmak için reduceFromStock metotuna gelsek de yine de bekliyor olacağız. Örneğin kitap stoğunu düşmek için metota gelen worker ile kalem stoğunu düşmek için gelen workerlar birbirini bekleyecek. Bu gibi farklı parametler ile gelen isteklerin bir birini bekletmemesi için kodumuzu aşağıdaki gibi geliştiriyoruz.
+
+                </p>
+            </div>
+
+            <div class="post">
+                <pre>
+                    <code class="language-java">
+    import lombok.extern.slf4j.Slf4j;
+    import org.springframework.web.bind.annotation.PathVariable;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RestController;
+    
+    import java.util.Map;
+    import java.util.concurrent.ConcurrentHashMap;
+    
+    @RestController
+    @Slf4j
+    public class SyncApiWithConcurrentHashMap {
+        static Map<String, Object> locks = new ConcurrentHashMap<>();
+    
+        @PostMapping("/hello/{param}")
+        public String hello(@PathVariable String param) throws InterruptedException {
+            reduceFromStock(param);
+            return  param+"\n";
+        }
+    
+        private boolean reduceFromStock(String productId)throws InterruptedException {
+            synchronized (locks.computeIfAbsent(productId, k -> new Object()))
+            {
+                for(int i = 5; i > 0; i--) {
+                    Thread.sleep(100);
+                    log.info("Counter   --- for  "+productId+ " --- "  + i + " -- "+ Thread.currentThread().getName());
+                }
+                return true;
+            }
+        }
+    }
+                    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <pre>
+    <code class="language-java" >
+    Worker -- http-nio-8080-exec-4
+    Worker -- http-nio-8080-exec-6
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-4
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-6
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-4
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-6
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-4
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-6
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-4
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-6
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-4
+    Worker -- http-nio-8080-exec-48
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-6
+    Worker -- http-nio-8080-exec-50
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-48
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-50
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-48
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-50
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-48
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-50
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-50
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-48
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-50
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-48
+    Worker -- http-nio-8080-exec-49
+    Worker -- http-nio-8080-exec-47
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-47
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-49
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-47
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-49
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-47
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-49
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-47
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-49
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-47
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-49
+    Worker -- http-nio-8080-exec-46
+    Worker -- http-nio-8080-exec-37
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-46
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-37
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-46
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-37
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-46
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-37
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-46
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-37
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-46
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-37
+    Worker -- http-nio-8080-exec-45
+    Worker -- http-nio-8080-exec-35
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-45
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-35
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-45
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-35
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-45
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-35
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-45
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-35
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-45
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-35
+    Worker -- http-nio-8080-exec-44
+    Worker -- http-nio-8080-exec-31
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-31
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-44
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-31
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-44
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-31
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-44
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-31
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-44
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-31
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-44
+    Worker -- http-nio-8080-exec-43
+    Worker -- http-nio-8080-exec-28
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-28
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-43
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-28
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-43
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-43
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-28
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-43
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-28
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-43
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-28
+    Worker -- http-nio-8080-exec-42
+    Worker -- http-nio-8080-exec-25
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-42
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-25
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-42
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-25
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-42
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-25
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-25
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-42
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-42
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-25
+    Worker -- http-nio-8080-exec-41
+    Worker -- http-nio-8080-exec-23
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-41
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-23
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-41
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-23
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-41
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-23
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-41
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-23
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-41
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-23
+    Worker -- http-nio-8080-exec-40
+    Worker -- http-nio-8080-exec-18
+    Counter   --- for  foo --- 5 -- http-nio-8080-exec-40
+    Counter   --- for  bar --- 5 -- http-nio-8080-exec-18
+    Counter   --- for  foo --- 4 -- http-nio-8080-exec-40
+    Counter   --- for  bar --- 4 -- http-nio-8080-exec-18
+    Counter   --- for  foo --- 3 -- http-nio-8080-exec-40
+    Counter   --- for  bar --- 3 -- http-nio-8080-exec-18
+    Counter   --- for  foo --- 2 -- http-nio-8080-exec-40
+    Counter   --- for  bar --- 2 -- http-nio-8080-exec-18
+    Counter   --- for  foo --- 1 -- http-nio-8080-exec-40
+    Counter   --- for  bar --- 1 -- http-nio-8080-exec-18
+    .
+    .
+    </code>
+                </pre>
+            </div>
+
+            <div class="post">
+                <p>Burada gelen metot parametresine göre işlemlerimizi senkronize ettik. Kullandığımız ConcurrentHaspMap thread safe bir maptir ve workerların erişiminde bize veri tutarlılığı garantisi verir. Metodun tamamının senkronize olmasına nazaran çok daha performanslı hale gelmiştir. Aşağıdaki grafikte de farkedilecektir. Ortalama cevap sürelerinde farklı parametre sayısı ile ters orantılı olacak şekilde bir azalma olmuştur.</p>
+                <br>
+                <img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*1Xv12kzy61m9TOcR-J8pNQ.png" alt="">
+                <br>
+               
+            </div>
+
+        </div>
+</body>
+<script src="./share/prism.js"></script>
+
+</html>
