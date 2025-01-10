@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-EYBZE616VX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-EYBZE616VX');
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242" crossorigin="anonymous"></script>
+    <meta charset="UTF-8" />
+    <title>Free XMedium</title>
+    <style>
+        /* HTML ve BODY etiketlerinin boyutu sayfa yüksekliğini kaplasın
+           ve scroll'u kapatalım */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            overflow: hidden; /* Sayfa scroll'unu kapat */
+        }
+        /* Tüm içeriği saracak kap */
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        /* Üst kısımdaki form alanı */
+        .top {
+            padding: 1px;
+            text-align: center;
+            background-color: #F2F2F2; /* İsteğe bağlı arka plan rengi */
+        }
+        /* Geriye kalan tüm yüksekliği iframe'e ayıran alan */
+        .bottom {
+            flex: 1;
+        }
+        /* iFrame, bottom alanını tamamen kaplasın */
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none; /* Kenarlığı kaldırmak isterseniz */
+        }
+        /* Input ve buton için basit bir stil */
+        input {
+            width: 60%;
+            padding: 8px;
+            margin-right: 5px;
+        }
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Üst Kısım: Başlık, URL girişi ve buton -->
+    <div class="top">
+        <h1>Medium Preview</h1>
+        <input
+                type="text"
+                id="urlInput"
+                placeholder="https://medium.com/...."
+        />
+        <button onclick="showInIframe()">Ekle ve Göster</button>
+    </div>
+    <!-- Alt Kısım: iFrame'in kapladığı alan -->
+    <div class="bottom">
+        <iframe id="resultIframe" src=""></iframe>
+    </div>
+</div>
+<script>
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlInput = document.getElementById('urlInput');
+        urlInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                showInIframe();
+            }
+        });
+    });
+    function showInIframe() {
+        const userUrl = document.getElementById('urlInput').value.trim();
+        if (userUrl) {
+            // Başına freedium linkini ekle
+            const finalUrl = 'https://freedium.cfd/' + userUrl;
+            // iframe içinde göster
+            document.getElementById('resultIframe').src = finalUrl;
+        } else {
+            alert("Lütfen bir URL girin!");
+        }
+    }
+</script>
+</body>
+</html>
