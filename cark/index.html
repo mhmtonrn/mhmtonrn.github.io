@@ -11,7 +11,7 @@
     </script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5296134621864242" crossorigin="anonymous"></script>
     <meta charset="UTF-8">
-    <title>Dinamik Çark (Veri Ekleyerek - Güncelleme)</title>
+    <title>Dinamik Çark</title>
     <style>
         /* ================== GENEL TASARIM ================== */
         * {
@@ -114,10 +114,14 @@
             padding: 5px;
             font-size: 14px;
             overflow: hidden;
-            white-space: nowrap;     /* Taşma engelleme ayarları */
-            text-overflow: ellipsis; /* Metin çok uzunsa ... şeklinde kısalt */
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
-        /* Pointer artık çarkın altında, yukarı doğru bakıyor. */
+        /*
+          Pointer (ok) alt tarafta, yukarı doğru baksın.
+          0° noktasının normalde sağ tarafı işaret ettiğini unutmayın.
+          Biz segmentleri 270° kaydırarak alt tarafı "başlangıç" kabul ediyoruz.
+        */
         .pointer {
             position: absolute;
             bottom: 0;
@@ -127,7 +131,7 @@
             height: 0;
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
-            border-top: 25px solid #333; /* Yukarı baksın diye top kullandık */
+            border-top: 25px solid #333;
             z-index: 9999;
         }
         /* ========== SONUÇ ALANI ========== */
@@ -135,7 +139,7 @@
             font-size: 20px;
             font-weight: bold;
             color: #333;
-            min-height: 24px; /* Çark dönerken sonuç kısmı sabit dursun */
+            min-height: 24px;
         }
         /* Responsive için ufak ayar */
         @media (max-width: 480px) {
@@ -147,14 +151,14 @@
     </style>
 </head>
 <body>
-<h1>Dinamik Çark (Veri Ekleyerek - Güncelleme)</h1>
+<h1>Dinamik Çark (Pointer Altta)</h1>
 <div class="container">
     <!-- Veri ekleme alanı -->
     <div class="input-area">
         <input
                 type="text"
                 id="dataInput"
-                placeholder="Veri giriniz"
+                placeholder="Veri giriniz (Enter ile ekle)"
         />
         <button class="btn" id="addBtn">Ekle</button>
         <button class="btn" id="spinBtn">Çarkı Döndür</button>
@@ -180,13 +184,18 @@
     let segments = [];
     // Son dönüş açısını saklamak için
     let currentRotation = 0;
-    // Buton eventleri
+    // Buton ve input eventleri
     addBtn.addEventListener("click", addData);
     spinBtn.addEventListener("click", spinWheel);
     resetBtn.addEventListener("click", resetWheel);
+    // "Enter" tuşuna basınca otomatik Ekle
+    dataInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+            addData();
+        }
+    });
     /**
-     * Kullanıcıdan aldığımız tek bir veriyi (satır) çarka ekler.
-     * segments dizisine push eder, çarkı yeniden oluşturur.
+     * Kullanıcıdan aldığımız veriyi çarka ekler (Enter veya Ekle butonu).
      */
     function addData() {
         const newData = dataInput.value.trim();
@@ -201,6 +210,9 @@
     /**
      * segments dizisine göre çarkı yeniden oluşturur.
      * Her bir segmenti (dilim) oluşturup wheel içine ekler.
+     *
+     * Dikkat: 0. segment 270° konumuna yerleştirilir (alt nokta).
+     * Sonraki segmentler saat yönünde ilerler.
      */
     function createWheel() {
         // Önce eski dilimleri temizle
@@ -226,9 +238,15 @@
             seg.textContent = segments[i];
             // Rastgele veya index'e göre renklendirme
             seg.style.backgroundColor = getRandomColor(i);
-            // Segmentin konumu
+            /*
+              i=0 için segment açısı = 270°
+              i=1 için segment açısı = 270° + anglePerSegment
+              vb.
+              Böylece 0. segment alt noktada başlar, diğerleri saat yönünde sıralanır.
+            */
+            const segmentAngle = 270 + i * anglePerSegment;
             seg.style.transform = `
-          rotate(${i * anglePerSegment}deg)
+          rotate(${segmentAngle}deg)
           translate(-100%, -100%)
         `;
             wheel.appendChild(seg);
@@ -238,11 +256,13 @@
      * Rastgele bir renk (HSL) döndürür.
      */
     function getRandomColor(index) {
+        // index’e bağlı biraz değişen tonlar
         const hue = (index * 73) % 360;
         return `hsl(${hue}, 70%, 60%)`;
     }
     /**
      * Çarkı rastgele bir açıya döndürür, hangi dilimde durduğunu hesaplar.
+     * Pointer alt noktada sabit, 270° (CSS açısında) = segment 0.
      */
     function spinWheel() {
         if (segments.length === 0) {
@@ -256,15 +276,22 @@
         currentRotation = randomAngle;
         // Animasyon sonrası hesap
         setTimeout(() => {
-            const actualAngle = currentRotation % 360;
-            const anglePerSegment = 360 / segments.length;
-            // index = ters yönden hesap
-            // (Pointer aşağıda ama hesap mantığı benzer, 0 dereceyi
-            //  "ilk segment" kabul edersek, ufak bir offset yapabiliriz)
-            let segmentIndex = Math.floor(actualAngle / anglePerSegment);
-            segmentIndex = segments.length - 1 - segmentIndex;
-            if (segmentIndex < 0) {
-                segmentIndex += segments.length;
+            const total = segments.length;
+            const anglePerSegment = 360 / total;
+            /*
+              Önemli kısım:
+              0. segment 270°'de duruyordu.
+              Wheel randomAngle kadar döndüğüne göre,
+              segment 0'ın efektif açısı = (270 - randomAngle) mod 360
+              Bu açıya göre hangi segmentte kaldığımızı hesaplamak için:
+                segmentIndex = floor( efektifAçı / anglePerSegment )
+              Ancak negatif değer çıkabilir, mod alarak pozitife çeviriyoruz.
+            */
+            let effectiveAngle = (270 - (currentRotation % 360) + 360) % 360;
+            let segmentIndex = Math.floor(effectiveAngle / anglePerSegment);
+            // Emniyet önlemi:
+            if (segmentIndex >= total) {
+                segmentIndex = total - 1;
             }
             // Seçilen dilim
             const selected = segments[segmentIndex];
@@ -276,7 +303,6 @@
      */
     function resetWheel() {
         segments = [];
-        // Teker teker silmeye de gerek yok; segments zaten boşalacak
         while (wheel.firstChild) {
             wheel.removeChild(wheel.firstChild);
         }
